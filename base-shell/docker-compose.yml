@@ -1,0 +1,108 @@
+version: '2'
+services:
+  mysql8:
+    image: mysql/mysql-server:latest
+    ports:
+      - 3306:3306
+    volumes:
+      - ./mysql/config/my.cnf:/etc/my.cnf:ro
+      - ./mysql/data:/var/lib/mysql:rw
+      - ./mysql/log:/var/log:rw
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_ROOT_HOST=%
+
+  redis:
+    image: redis:5.0.5
+    ports:
+      - 6379:6379
+    volumes:
+      - ./redis/config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./redis/data:/data:rw
+      - ./redis/log:/log:rw
+    environment:
+      - TZ=Asia/Shanghai
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  mongo:
+    image: mongo:4.0.10
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo/config/mongod.conf:/etc/mongo/mongod.conf:rw
+      - ./mongo/data:/data/db:rw
+      - ./mongo/log:/usr/local/var/log/mongodb/:rw
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 123456
+      TZ: Asia/Shanghai
+    command: --config /etc/mongo/mongod.conf --auth
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - 2181:2181
+    volumes:
+      - ./zookeeper/config/zoo.cfg:/opt/zookeeper-3.4.13/conf/zoo.cfg:ro
+      - ./zookeeper/data:/opt/data:rw
+      - ./zookeeper/log:/opt/log:rw
+    environment:
+      - TZ=Asia/Shanghai
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: 192.168.2.91
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_BROKER_ID: 0
+      TZ: Asia/Shanghai
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./kafka/log:/tmp/kafka-logs:rw
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.6.1
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+#      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+  graylog:
+    image: graylog/graylog:3.0
+    ports:
+      - 9000:9000
+      - 12201:12201/udp
+      - 1514:1514
+    environment:
+      GRAYLOG_HTTP_EXTERNAL_URI: http://192.168.2.91:9000/
+      GRAYLOG_WEB_ENDPOINT_URI: http://192.168.2.91:9000/
+      GRAYLOG_PASSWORD_SECRET: somepasswordpepper
+      TZ: Asia/Shanghai
+    volumes:
+      - ./graylog/config/graylog.conf:/usr/share/graylog/data/config/graylog.conf:rw
+      - ./graylog/log:/usr/share/graylog/data/log:rw
+    links:
+      - elasticsearch
+
+  logstash:
+    image: logstash:7.1.1
+    volumes:
+      - ./logstash.yml/data:/usr/share/logstash/pipeline:rw
+      - ./logstash.yml/config/logstash.yml:/usr/share/logstash.yml/config/logstash.yml:rw
+    environment:
+      TZ: Asia/Shanghai
+
+
