@@ -104,4 +104,15 @@ services:
     environment:
       TZ: Asia/Shanghai
 
+  zipkin:
+    image: openzipkin/zipkin
+    environment:
+      - STORAGE_TYPE=elasticsearch
+      - ES_HOSTS=http://192.168.0.107:9200
+    ports:
+      - 9411:9411
+    depends_on:
+      - elasticsearch
+
+
 
