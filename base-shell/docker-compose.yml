@@ -55,13 +55,15 @@ services:
     ports:
       - 9092:9092
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: 192.168.0.107
-      KAFKA_ZOOKEEPER_CONNECT: 192.168.0.107:2181
+      KAFKA_ADVERTISED_HOST_NAME: 192.168.2.91
+      KAFKA_ZOOKEEPER_CONNECT: 192.168.2.91:2181
       KAFKA_BROKER_ID: 0
       TZ: Asia/Shanghai
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./kafka/log:/tmp/kafka-logs:rw
+    depends_on:
+      - zookeeper
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.6.1
@@ -73,13 +75,9 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - TZ=Asia/Shanghai
     volumes:
-      - ./elasticsearch/data:/usr/share/elasticsearch/data
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    mem_limit: 1g
+      - ./elasticsearch/data:/data:rw
+      - ./elasticsearch/log:/logs:rw
   graylog:
     image: graylog/graylog:3.0
     ports:
@@ -87,13 +85,15 @@ services:
       - 12201:12201/udp
       - 1514:1514
     environment:
-      GRAYLOG_HTTP_EXTERNAL_URI: http://192.168.0.107:9000/
-      GRAYLOG_ELASTICSEARCH_HOSTS: http://192.168.0.107:9200
-      GRAYLOG_WEB_ENDPOINT_URI: http://192.168.0.107:9000/
-      GRAYLOG_MONGODB_URI: mongodb://graylog:graylog@192.168.0.107:27017/graylog
+      GRAYLOG_HTTP_EXTERNAL_URI: http://192.168.2.91:9000/
+      GRAYLOG_ELASTICSEARCH_HOSTS: http://192.168.2.91:9200
+      GRAYLOG_WEB_ENDPOINT_URI: http://192.168.2.91:9000/
+      GRAYLOG_MONGODB_URI: mongodb://graylog:graylog@192.168.2.91:27017/graylog
       GRAYLOG_PASSWORD_SECRET: somepasswordpepper
       TZ: Asia/Shanghai
     links:
+      - elasticsearch
+    depends_on:
       - elasticsearch
 
   logstash:
@@ -108,7 +108,7 @@ services:
     image: openzipkin/zipkin
     environment:
       - STORAGE_TYPE=elasticsearch
-      - ES_HOSTS=http://192.168.0.107:9200
+      - ES_HOSTS=http://192.168.2.91:9200
     ports:
       - 9411:9411
     depends_on:
